@@ -145,13 +145,13 @@ uint8_t LinuxI2CDriver::readRegisters(uint8_t addr, uint8_t reg,
         addr  : addr,
         flags : 0,
         len   : 1,
-        buf   : (typeof(msgs->buf))&reg
+        buf   : &reg
         },
         {
         addr  : addr,
         flags : I2C_M_RD,
         len   : len,
-        buf   : (typeof(msgs->buf))data,
+        buf   : data,
         }
     };
     struct i2c_rdwr_ioctl_data i2c_data = {
@@ -174,31 +174,25 @@ uint8_t LinuxI2CDriver::readRegistersMultiple(uint8_t addr, uint8_t reg,
                                               uint8_t len, 
                                               uint8_t count, uint8_t* data)
 {
-#ifdef I2C_RDRW_IOCTL_MAX_MSGS
-    const uint8_t max_count = I2C_RDRW_IOCTL_MAX_MSGS / 2;
-#else
-    const uint8_t max_count = 8;
-#endif
-
     if (_fd == -1) {
         return 1;
     }
     while (count > 0) {
-        uint8_t n = count > max_count ? max_count : count;
+        uint8_t n = count>8?8:count;
         struct i2c_msg msgs[2*n];
         struct i2c_rdwr_ioctl_data i2c_data = {
         msgs : msgs,
-        nmsgs : (typeof(i2c_data.nmsgs))(2*n)
+        nmsgs : (2*n)
         };
         for (uint8_t i=0; i<n; i++) {
             msgs[i*2].addr = addr;
             msgs[i*2].flags = 0;
             msgs[i*2].len = 1;
-            msgs[i*2].buf = (typeof(msgs->buf))&reg;
+            msgs[i*2].buf = &reg;
             msgs[i*2+1].addr = addr;
             msgs[i*2+1].flags = I2C_M_RD;
             msgs[i*2+1].len = len;
-            msgs[i*2+1].buf = (typeof(msgs->buf))data;
+            msgs[i*2+1].buf = data;
             data += len;
         };
         if (ioctl(_fd, I2C_RDWR, &i2c_data) == -1) {
